@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout App - Biotipo</title>
+    <!-- Tailwind CSS per uno stile moderno e scuro -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen pb-24">
+
+    <!-- Header statico -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50 shadow-md text-center">
+        <h1 class="text-xl font-bold text-orange-500 tracking-wide uppercase">Scheda Biotipo</h1>
+        <p class="text-xs text-gray-400 mt-0.5">Ipertrofia & Recupero Muscolare</p>
+    </header>
+
+    <!-- Barra Timer Persistente in fondo -->
+    <div id="timer-bar" class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4 flex items-center justify-between shadow-2xl z-50 hidden">
+        <div class="flex flex-col">
+            <span class="text-xs text-gray-400 font-medium uppercase tracking-wider">Recupero</span>
+            <span id="timer-display" class="text-2xl font-black text-orange-500 tabular-nums">02:00</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="toggleTimer()" id="timer-btn" class="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors">AVVIA</button>
+            <button onclick="resetTimer()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium py-2 px-3 rounded-lg text-sm transition-colors">RESET</button>
+        </div>
+    </div>
+
+    <!-- Contenitore Principale -->
+    <main class="max-w-md mx-auto p-4 space-y-6">
+
+        <!-- Selettore dei Giorni -->
+        <div class="grid grid-cols-3 gap-2 bg-gray-900 p-1.5 rounded-xl border border-gray-800">
+            <button onclick="switchDay(1)" id="btn-day1" class="py-2.5 text-center text-sm font-bold rounded-lg transition-all bg-orange-600 text-white shadow-sm">GIO 1</button>
+            <button onclick="switchDay(2)" id="btn-day2" class="py-2.5 text-center text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-gray-200">GIO 2</button>
+            <button onclick="switchDay(3)" id="btn-day3" class="py-2.5 text-center text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-gray-200">GIO 3</button>
+        </div>
+
+        <!-- Info Giorno Selezionato -->
+        <div id="day-info" class="bg-gradient-to-r from-gray-900 to-gray-850 p-4 rounded-xl border border-gray-800 shadow-sm">
+            <h2 id="day-title" class="text-base font-bold text-gray-200">Giorno 1</h2>
+            <p id="day-desc" class="text-xs text-orange-400/90 font-medium mt-1"></p>
+        </div>
+
+        <!-- Lista Esercizi Dinamica -->
+        <div id="exercises-container" class="space-y-4"></div>
+    </main>
+
+    <!-- Script logica applicazione -->
+    <script>
+        // Database della scheda di allenamento fornito nel documento
+        const workoutData = {
+            1: {
+                title: "Giorno 1: Spinta & Quadricipiti",
+                desc: "Petto, Spalle Anteriori/Laterali, Tricipiti & Quadricipiti",
+                exercises: [
+                    { name: "Squat", sets: 4, reps: "6-8", type: "Bilanciere", rest: 120, note: "Carico pesante, focus spinta" },
+                    { name: "Panca Piana", sets: 4, reps: "8", type: "Bilanciere", rest: 120, note: "Carico pesante, controllo al petto" },
+                    { name: "Panca Inclinata", sets: 3, reps: "8", type: "Manubri", rest: 90, note: "Traiettoria controllata" },
+                    { name: "Alzata Lenta", sets: 3, reps: "8", type: "Bilanciere o Manubri", rest: 90, note: "Spinta verticale" },
+                    { name: "Tricipiti (French Press)", sets: 3, reps: "10", type: "Bilanciere", rest: 90, note: "Estensione completa dell'avambraccio" },
+                    { name: "Piegamenti", sets: 3, reps: "MAX", type: "Corpo libero", rest: 90, note: "Finisher per sfinire completamente il petto" }
+                ]
+            },
+            2: {
+                title: "Giorno 2: Trazione & Spessore",
+                desc: "Dorso, Catena Posteriore & Bicipiti",
+                exercises: [
+                    { name: "Stacco Rumeno", sets: 4, reps: "8", type: "Bilanciere", rest: 120, note: "Carico pesante, focus femorali e glutei" },
+                    { name: "Rematore", sets: 4, reps: "8", type: "Manubri", rest: 120, note: "Tirata al bacino, focus spessore dorso" },
+                    { name: "Tirate al Mento", sets: 3, reps: "10", type: "Bilanciere", rest: 90, note: "Focus trapezi e deltoidi" },
+                    { name: "Alzate Posteriori", sets: 3, reps: "12", type: "Manubri", rest: 90, note: "Isolamento deltoide posteriore" },
+                    { name: "Curl Alternato", sets: 3, reps: "10 (x braccio)", type: "Manubri", rest: 90, note: "Rotazione del polso in cima" },
+                    { name: "Curl a Martello (Hammer)", sets: 3, reps: "10", type: "Manubri", rest: 90, note: "Presa neutra per spessore avambraccio/bicipite" }
+                ]
+            },
+            3: {
+                title: "Giorno 3: Gambe, Richiami & Core",
+                desc: "Gambe, Richiamo Petto/Spalle, Bicipiti & Core",
+                exercises: [
+                    { name: "Affondi", sets: 3, reps: "10 (x gamba)", type: "Manubri", rest: 120, note: "Lavoro dinamico e unilaterale" },
+                    { name: "Panca Inclinata", sets: 3, reps: "10", type: "Manubri", rest: 120, note: "Richiamo petto ad alte ripetizioni" },
+                    { name: "Croci Laterali", sets: 3, reps: "10", type: "Manubri", rest: 90, note: "Richiamo pettorali larghi, allungamento" },
+                    { name: "Alzate Laterali", sets: 3, reps: "12", type: "Manubri", rest: 90, note: "Richiamo spalle, isolamento deltoide laterale" },
+                    { name: "Curl Panca Inclinata", sets: 3, reps: "12", type: "Manubri", rest: 90, note: "Focus massimo allungamento e picco bicipiti" },
+                    { name: "Plank", sets: 3, reps: "MAX tempo", type: "Corpo libero", rest: 90, note: "Focus sulla stabilità profonda del core" },
+                    { name: "Crunch su panca inclinata", sets: 3, reps: "15-20", type: "Panca inclinata", rest: 90, note: "Contrazione controllata, espira quando sali" }
+                ]
+            }
+        };
+
+        let currentDay = 1;
+        let timerInterval = null;
+        let timeRemaining = 0;
+        let timerRunning = false;
+
+        function switchDay(dayId) {
+            currentDay = dayId;
+            [1, 2, 3].forEach(id => {
+                const btn = document.getElementById(`btn-day${id}`);
+                if(id === dayId) {
+                    btn.className = "py-2.5 text-center text-sm font-bold rounded-lg transition-all bg-orange-600 text-white shadow-sm";
+                } else {
+                    btn.className = "py-2.5 text-center text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-gray-200";
+                }
+            });
+            renderExercises();
+        }
+
+        function renderExercises() {
+            const container = document.getElementById('exercises-container');
+            const data = workoutData[currentDay];
+            
+            document.getElementById('day-title').innerText = data.title;
+            document.getElementById('day-desc').innerText = data.desc;
+            container.innerHTML = '';
+
+            data.exercises.forEach((ex, exIdx) => {
+                const exId = `d${currentDay}-e${exIdx}`;
+                const savedWeight = localStorage.getItem(`${exId}-weight`) || '';
+
+                let setCheckboxes = '';
+                for(let s = 1; s <= ex.sets; s++) {
+                    const setKey = `${exId}-s${s}`;
+                    const checked = localStorage.getItem(setKey) === 'true' ? 'checked' : '';
+                    setCheckboxes += `
+                        <button onclick="toggleSet('${setKey}', ${ex.rest}, this)" class="w-10 h-10 rounded-lg font-bold border text-sm flex items-center justify-center transition-all ${checked ? 'bg-orange-600 border-orange-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-400'}">
+                            ${s}
+                        </button>
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-gray-100 text-base">${ex.name}</h3>
+                                <p class="text-xs text-orange-400 font-medium mt-0.5">${ex.sets}x${ex.reps} — <span class="text-gray-400">${ex.type}</span></p>
+                            </div>
+                            <div class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800">
+                                <input type="text" value="${savedWeight}" placeholder="0" oninput="saveWeight('${exId}', this.value)" class="w-10 bg-transparent text-center font-bold text-sm text-gray-100 focus:outline-none placeholder-gray-700">
+                                <span class="text-xs font-semibold text-gray-500">kg</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 italic bg-gray-950 p-2 rounded-lg border border-gray-900/50">${ex.note}</p>
+                        <div class="flex flex-wrap gap-2.5 pt-1">
+                            ${setCheckboxes}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function saveWeight(exId, value) {
+            localStorage.setItem(`${exId}-weight`, value);
+        }
+
+        function toggleSet(setKey, restSeconds, element) {
+            const isChecked = element.classList.contains('bg-orange-600');
+            if (!isChecked) {
+                element.classList.remove('bg-gray-800', 'border-gray-700', 'text-gray-400');
+                element.classList.add('bg-orange-600', 'border-orange-500', 'text-white');
+                localStorage.setItem(setKey, 'true');
+                startTimer(restSeconds);
+            } else {
+                element.classList.remove('bg-orange-600', 'border-orange-500', 'text-white');
+                element.classList.add('bg-gray-800', 'border-gray-700', 'text-gray-400');
+                localStorage.setItem(setKey, 'false');
+            }
+        }
+
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            timeRemaining = seconds;
+            timerRunning = true;
+            document.getElementById('timer-bar').classList.remove('hidden');
+            updateTimerDisplay();
+            
+            document.getElementById('timer-btn').innerText = "PAUSA";
+            document.getElementById('timer-btn').className = "bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors";
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+                if(timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    timerRunning = false;
+                    document.getElementById('timer-btn').innerText = "AVVIA";
+                    document.getElementById('timer-btn').className = "bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors";
+                    if (navigator.vibrate) navigator.vibrate();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+            const secs = (timeRemaining % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+        }
+
+        function toggleTimer() {
+            if(timerRunning) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+                document.getElementById('timer-btn').innerText = "RIPRENDI";
+                document.getElementById('timer-btn').className = "bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors";
+            } else {
+                startTimer(timeRemaining > 0 ? timeRemaining : 90);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            document.getElementById('timer-bar').classList.add('hidden');
+        }
+
+        switchDay(1);
+    </script>
+</body>
+</html>
